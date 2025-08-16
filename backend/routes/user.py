@@ -1,16 +1,21 @@
-from flask import Blueprint
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
 from models.user_model import User
-from utils.levels import radius_for_level, badges_for_xp
+from extensions import db
 
 user_bp = Blueprint("user", __name__)
 
-@user_bp.get("/me")
-@jwt_required()
-def me():
-    uid = get_jwt_identity()
-    user = User.query.get_or_404(uid)
-    data = user.to_dict()
-    data["radius_km"] = radius_for_level(user.level)
-    data["badges"] = badges_for_xp(user.xp)
-    return data
+@user_bp.route("/", methods=["GET"])
+def get_users():
+    users = User.query.all()
+    return jsonify([{"id": u.id, "username": u.username, "email": u.email} for u in users])
+
+@user_bp.route("/", methods=["POST"])
+def create_user():
+    data = request.json
+    new_user = User(username=data["username"], email=data["email"], password=data["password"])
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({"message": "User created!"}), 201
+@user_bp.route("/signup", methods=["POST"])
+def signup():
+    return {"message": "Signup works!"}

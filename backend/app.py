@@ -1,50 +1,133 @@
-from flask import Flask
-from flask_cors import CORS
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
-from config import Config
-from routes import api_bp
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+import datetime
+import os
+from functools import wraps
 
-
-
-# Global extensions
-jwt = JWTManager()
+# Initialize DB
 db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(Config)
 
-    # Init extensions
-    CORS(app, supports_credentials=True)
-    jwt.init_app(app)
+    # Database setup (from env or fallback to local)
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+        "DATABASE_URL",
+        "postgresql://goquest_user:viha%401812@localhost:5432/goquest_db"
+    )
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = "supersecretkey"  # change in production
+
     db.init_app(app)
-    app.register_blueprint(api_bp)
 
-    # Register blueprints
-    from routes.auth import auth_bp
-    from routes.user import user_bp
-    from routes.feedback import feedback_bp
-    from routes.trips import trips_bp
+    # -----------------------------
+    # Models
+    # -----------------------------
+    class User(db.Model):
+        __tablename__ = "users"
+        id = db.Column(db.Integer, primary_key=True)
+        username = db.Column(db.String(50), unique=True, nullable=False)
+        email = db.Column(db.String(100), unique=True, nullable=False)
+        password = db.Column(db.String(200), nullable=False)
 
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(user_bp, url_prefix="/api/user")
-    app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
-    app.register_blueprint(trips_bp, url_prefix="/api/trips")
-
-    # Create tables (dev-only)
+    # Create tables
     with app.app_context():
         db.create_all()
 
-    @app.route("/")
-    def home():
-        return {"message": "GoQuest Transit Backend is running 🚀"}
-    
-    
+    # -----------------------------
+    # Token Required Decorator
+    # -----------------------------
+    def token_required(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            token = None
 
+            # Token must be sent in Authorization header as Bearer <token>
+            if "Authorization" in request.headers:
+                try:
+                    token = request.headers["Authorization"].split(" ")[1]
+                except IndexError:
+                    return jsonify({"error": "Token format is invalid!"}), 401
+
+            if not token:
+                return jsonify({"error": "Token is missing!"}), 401
+
+            try:
+                data = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+                current_user = User.query.get(data["user_id"])
+            except Exception as e:
+                return jsonify({"error": "Token is invalid or expired!"}), 401
+
+            return f(current_user, *args, **kwargs)
+        return decorated
+
+    # -----------------------------
+    # Routes
+    # -----------------------------
+    @app.route("/", methods=["GET"])
+    def home():
+        return jsonify({"message": "GoQuest Transit API is running 🚀"})
+
+    @app.route("/signup", methods=["POST"])
+    def signup():
+        data = request.get_json()
+        print("📩 Received JSON:", data)
+        
+        if not data or not data.get("username") or not data.get("email") or not data.get("password"):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        # Check if user already exists
+        if User.query.filter((User.username == data["username"]) | (User.email == data["email"])).first():
+            return jsonify({"error": "User already exists"}), 409
+
+        # Hash password
+        hashed_pw = generate_password_hash(data["password"], method="pbkdf2:sha256")
+
+        new_user = User(username=data["username"], email=data["email"], password=hashed_pw)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User created successfully"}), 201
+
+    @app.route("/login", methods=["POST"])
+    def login():
+        data = request.get_json()
+
+        if not data or not data.get("username") or not data.get("password"):
+            return jsonify({"error": "Missing username or password"}), 400
+
+        user = User.query.filter_by(username=data["username"]).first()
+
+        if not user or not check_password_hash(user.password, data["password"]):
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        # Generate JWT token
+        token = jwt.encode(
+            {
+                "user_id": user.id,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            },
+            app.config["SECRET_KEY"],
+            algorithm="HS256"
+        )
+
+        return jsonify({"token": token})
+
+    @app.route("/profile", methods=["GET"])
+    @token_required
+    def profile(current_user):
+        return jsonify({
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email
+        })
 
     return app
 
+
+# Run the app
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)

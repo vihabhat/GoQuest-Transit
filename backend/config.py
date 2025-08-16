@@ -1,7 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # load .env file
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev_secret_key"
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///goquest.db"
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "jwt_secret_key"
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")

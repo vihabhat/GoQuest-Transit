@@ -1,44 +1,43 @@
-from flask import Blueprint, request
-from flask_jwt_extended import create_access_token
-from app import db
-from models.user_model import User
+from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import create_access_token, jwt_required
+from extensions import db
+from db import User   # <-- import model here
 
 auth_bp = Blueprint("auth", __name__)
 
-@auth_bp.post("/register")
-def register():
-    data = request.get_json() or {}
-    name = data.get("name")
-    email = data.get("email")
+@auth_bp.route("/signup", methods=["POST"])
+def signup():
+    data = request.json
+    username = data.get("username")
     password = data.get("password")
 
-    if not all([name, email, password]):
-        return {"error": "name, email, password are required"}, 400
+    if User.query.filter_by(username=username).first():
+        return jsonify({"msg": "User already exists"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return {"error": "email already registered"}, 409
-
-    user = User(name=name, email=email)
-    user.set_password(password)
-
-    db.session.add(user)
+    hashed_pw = generate_password_hash(password)
+    new_user = User(username=username, password=hashed_pw)
+    db.session.add(new_user)
     db.session.commit()
 
-    token = create_access_token(identity=user.id)
-    return {"user": user.to_dict(), "access_token": token}, 201
+    return jsonify({"msg": "Signup successful"}), 201
 
-@auth_bp.post("/login")
+
+@auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
-    email = data.get("email")
+    data = request.json
+    username = data.get("username")
     password = data.get("password")
 
-    if not all([email, password]):
-        return {"error": "email and password required"}, 400
+    user = User.query.filter_by(username=username).first()
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
 
-    user = User.query.filter_by(email=email).first()
-    if not user or not user.check_password(password):
-        return {"error": "invalid credentials"}, 401
+    access_token = create_access_token(identity=username)
+    return jsonify({"access_token": access_token}), 200
 
-    token = create_access_token(identity=user.id)
-    return {"user": user.to_dict(), "access_token": token}
+
+@auth_bp.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    return jsonify({"msg": "You accessed a protected route!"}), 200
