@@ -41,7 +41,7 @@ function Login() {
         localStorage.setItem("token", data.token);
 
         // ✅ Redirect to landing page after success
-        setTimeout(() => navigate("/landing"), 1000);
+        setTimeout(() => navigate("/dashboard"), 1000);
       } else {
         toast({
           title: "Login failed",
