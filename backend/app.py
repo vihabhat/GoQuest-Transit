@@ -4,13 +4,26 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime, timedelta
 import os
-import jwt
-from extensions import db, migrate, bcrypt, jwt 
+import jwt  # PyJWT
+from flask_cors import CORS
+
+# Local imports
+from extensions import db, migrate, bcrypt
 from models.user_model import User
 from routes.destination_routes import destinations_bp
 from routes.auth import auth_bp
+
+
 def create_app():
     app = Flask(__name__)
+    CORS(app, supports_credentials=True, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+
 
     # --- Config ---
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
@@ -20,13 +33,14 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecretkey")
 
-    # --- Init DB ---
+    # --- Init Extensions ---
     db.init_app(app)
-    with app.app_context():
-        db.create_all()
     migrate.init_app(app, db)
     bcrypt.init_app(app)
-    jwt.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+
     # --- Auth helper ---
     def token_required(f):
         @wraps(f)
@@ -49,8 +63,10 @@ def create_app():
                 current_user = User.query.get(data["user_id"])
                 if not current_user:
                     return jsonify({"error": "User not found"}), 401
-            except Exception:
-                return jsonify({"error": "Token is invalid or expired!"}), 401
+            except jwt.ExpiredSignatureError:
+                return jsonify({"error": "Token expired!"}), 401
+            except jwt.InvalidTokenError:
+                return jsonify({"error": "Invalid token!"}), 401
 
             return f(current_user, *args, **kwargs)
 
@@ -74,7 +90,7 @@ def create_app():
         if exists:
             return jsonify({"error": "User already exists"}), 409
 
-        # Hash password (Werkzeug 2.3+: use pbkdf2:sha256)
+        # Hash password
         hashed_pw = generate_password_hash(data["password"], method="pbkdf2:sha256")
 
         user = User(username=data["username"], email=data["email"], password=hashed_pw)
@@ -98,7 +114,6 @@ def create_app():
             app.config["SECRET_KEY"],
             algorithm="HS256",
         )
-        # PyJWT>=2 returns a str
         return jsonify({"token": token})
 
     @app.get("/profile")
@@ -107,11 +122,19 @@ def create_app():
         return jsonify(
             {"id": current_user.id, "username": current_user.username, "email": current_user.email}
         )
-
-    # --- Register blueprints (after app exists) ---
-    # app.register_blueprint(destination_bp)
+    
+    # --- Register blueprints ---
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(destinations_bp, url_prefix="/destinations")
+    
+
+    # Debug: Print all routes at startup
+    with app.app_context():
+        print("\n--- Registered Routes ---")
+        for rule in app.url_map.iter_rules():
+            print(f"{rule.endpoint}: {rule}")
+        print("--------------------------\n")
+
     return app
 
 
