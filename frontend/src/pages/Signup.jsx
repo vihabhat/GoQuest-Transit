@@ -1,11 +1,15 @@
 import React, { useState } from "react";
+import { Box, Input, Button, VStack, Text } from "@chakra-ui/react";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
+    dob: "",
+    address: "",
   });
 
   const [message, setMessage] = useState("");
@@ -27,14 +31,8 @@ const Signup = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -44,8 +42,11 @@ const Signup = () => {
         setFormData({
           username: "",
           email: "",
+          phone: "",
           password: "",
           confirmPassword: "",
+          dob: "",
+          address: "",
         });
       } else {
         setMessage(data.error || "Signup failed. Please try again.");
@@ -57,97 +58,100 @@ const Signup = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Create an Account</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          value={formData.username}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+    <Box
+      minH="100vh"
+      bgImage="url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e')"
+      bgSize="cover"
+      bgPos="center"
+      bgRepeat="no-repeat"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      p={4}
+    >
+      <Box
+        bg="whiteAlpha.900"
+        p={10}
+        borderRadius="lg"
+        boxShadow="xl"
+        width={{ base: "100%", md: "400px" }}
+        textAlign="center"
+      >
+        <Text fontSize="2xl" mb={6} color="teal.600" fontWeight="bold">
+          Create an Account
+        </Text>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+        <form onSubmit={handleSubmit}>
+          <VStack spacing={4}>
+            <Input
+              placeholder="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Phone Number"
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Date of Birth"
+              type="date"
+              name="dob"
+              value={formData.dob}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              placeholder="Confirm Password"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+            />
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+            <Button colorScheme="teal" type="submit" width="full">
+              Sign Up
+            </Button>
+          </VStack>
+        </form>
 
-        <input
-          type="password"
-          name="confirmPassword"
-          placeholder="Confirm Password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
-
-        <button type="submit" style={styles.button}>Sign Up</button>
-      </form>
-
-      {message && <p style={styles.message}>{message}</p>}
-    </div>
+        {message && (
+          <Text mt={4} color="teal.600" fontWeight="medium">
+            {message}
+          </Text>
+        )}
+      </Box>
+    </Box>
   );
-};
-
-// Inline CSS styles for simplicity
-const styles = {
-  container: {
-    width: "350px",
-    margin: "80px auto",
-    padding: "30px",
-    borderRadius: "12px",
-    boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-    backgroundColor: "#fff",
-    textAlign: "center",
-    fontFamily: "Arial, sans-serif",
-  },
-  title: {
-    marginBottom: "20px",
-    color: "#333",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
-  },
-  input: {
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-  },
-  button: {
-    padding: "10px",
-    border: "none",
-    borderRadius: "6px",
-    backgroundColor: "#007bff",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: "16px",
-  },
-  message: {
-    marginTop: "20px",
-    color: "#007bff",
-  },
 };
 
 export default Signup;

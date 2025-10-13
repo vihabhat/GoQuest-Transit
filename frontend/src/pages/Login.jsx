@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import { useState } from "react";
 import {
   Box,
@@ -11,12 +10,13 @@ import {
   FormLabel,
   useToast,
 } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const toast = useToast();
+  const navigate = useNavigate(); // 👈 Add navigation hook
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,6 +39,9 @@ function Login() {
           isClosable: true,
         });
         localStorage.setItem("token", data.token);
+
+        // ✅ Redirect to landing page after success
+        setTimeout(() => navigate("/landing"), 1000);
       } else {
         toast({
           title: "Login failed",
@@ -68,13 +71,7 @@ function Login() {
       bg="gray.100"
       p={6}
     >
-      <Box
-        w="sm"
-        p={8}
-        bg="white"
-        boxShadow="lg"
-        borderRadius="xl"
-      >
+      <Box w="sm" p={8} bg="white" boxShadow="lg" borderRadius="xl">
         <VStack spacing={4} align="stretch">
           <Heading size="lg" textAlign="center">
             GoQuest Transit Login
@@ -106,11 +103,14 @@ function Login() {
             <Button colorScheme="teal" type="submit" w="full">
               Login
             </Button>
-            <Button colorScheme="white" type="submit" w="full"></Button>
-            <Button colorScheme="teal" type="submit" w="full">
-              <Link to="/signup" style={{ color: "white" }}>
-                            Signup
-              </Link>
+
+            <Button
+              variant="outline"
+              w="full"
+              mt={3}
+              onClick={() => navigate("/signup")}
+            >
+              Create Account
             </Button>
           </form>
         </VStack>
