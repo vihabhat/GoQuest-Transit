@@ -5,6 +5,7 @@ import Destinations from "./pages/destinations";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import TripPlanner from "./pages/TripPlanner";
+import Gamification from "./pages/gamification";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/landing" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/tripplanner" element={<TripPlanner/>} />
+        <Route path="/gamification" element={<Gamification />} />
       </Routes>
     </Router>
   );
