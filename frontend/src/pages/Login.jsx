@@ -16,13 +16,13 @@ function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const toast = useToast();
-  const navigate = useNavigate(); // 👈 Add navigation hook
+  const navigate = useNavigate(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/login", {
+      const res = await fetch("http://127.0.0.1:5000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -40,7 +40,7 @@ function Login() {
         });
         localStorage.setItem("token", data.token);
 
-        // ✅ Redirect to landing page after success
+        //  Redirect to landing page after success
         setTimeout(() => navigate("/dashboard"), 1000);
       } else {
         toast({

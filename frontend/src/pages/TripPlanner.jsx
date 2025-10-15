@@ -1,21 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
   Container,
   Flex,
   Heading,
-  Textarea,
   VStack,
   HStack,
   useColorMode,
   IconButton,
   Spinner,
   Text,
+  Textarea,
 } from "@chakra-ui/react";
 import { SunIcon, MoonIcon } from "@chakra-ui/icons";
 import { FaArrowRight, FaRegCommentDots } from "react-icons/fa";
 import axios from "axios";
+import { useJsApiLoader, GoogleMap, Marker } from "@react-google-maps/api";
 
 const containerStyle = {
   width: "100%",
@@ -23,35 +24,39 @@ const containerStyle = {
 };
 
 export default function TripPlanner() {
-  const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [prompt, setPrompt] = useState(""); // ✅ Added
+  const [responses, setResponses] = useState([]); // ✅ Added
+  const [loading, setLoading] = useState(false);
+
+  const { colorMode, toggleColorMode } = useColorMode(); // ✅ Added
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
   });
 
-  // Get user's current location
+  // ✅ Get user's current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        (pos) => {
           setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
           });
         },
         (err) => {
           console.error("Geolocation error:", err);
-          // Fallback location (e.g., Bangalore)
+          // Default to Bangalore
           setUserLocation({ lat: 13.0192, lng: 77.6426 });
         }
       );
     }
   }, []);
 
-  const fetchNearbyPlaces = async () => {
-    if (!userLocation) return;
+  // ✅ AI Trip Planner call
+  const handlePlanTrip = async () => {
+    if (!prompt.trim()) return;
     setLoading(true);
 
     try {
@@ -61,12 +66,10 @@ export default function TripPlanner() {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      // Add AI response to chat
       setResponses((prev) => [
         ...prev,
         { text: res.data.response, id: prev.length },
       ]);
-
       setPrompt("");
     } catch (err) {
       console.error(err);
@@ -113,13 +116,32 @@ export default function TripPlanner() {
           </HStack>
         </Flex>
 
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={userLocation || { lat: 13.0192, lng: 77.6426 }}
-        zoom={14}
-      >
-        {/* Marker for user location */}
-        {userLocation && <Marker position={userLocation} label="You" />}
+        {/* Input for AI Query */}
+        <Flex mb={4}>
+          <Textarea
+            placeholder="Describe your trip plan (e.g., weekend getaway in Bangalore)"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            bg={colorMode === "light" ? "white" : "gray.700"}
+            mr={2}
+          />
+          <IconButton
+            icon={<FaArrowRight />}
+            colorScheme="teal"
+            onClick={handlePlanTrip}
+            isLoading={loading}
+            aria-label="Generate trip plan"
+          />
+        </Flex>
+
+        {/* Map Display */}
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={userLocation || { lat: 13.0192, lng: 77.6426 }}
+          zoom={14}
+        >
+          {userLocation && <Marker position={userLocation} label="You" />}
+        </GoogleMap>
 
         {/* AI Responses */}
         <VStack
@@ -137,6 +159,7 @@ export default function TripPlanner() {
               Your AI-generated travel plan will appear here.
             </Text>
           )}
+
           {responses.map((resp) => (
             <Box
               key={resp.id}
@@ -144,12 +167,12 @@ export default function TripPlanner() {
               borderRadius="md"
               bg={colorMode === "light" ? "white" : "gray.700"}
               shadow="md"
-              overflowWrap="break-word"
               whiteSpace="pre-wrap"
             >
               <Text>{resp.text}</Text>
             </Box>
           ))}
+
           {loading && (
             <Flex justify="center" py={4}>
               <Spinner size="lg" />
