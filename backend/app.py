@@ -1,9 +1,5 @@
 from flask import Flask, request, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-from datetime import datetime, timedelta
-import os
-import jwt  # PyJWT
+import requests
 from flask_cors import CORS
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -221,7 +217,9 @@ def create_app():
             print(f"{rule.endpoint}: {rule}")
         print("--------------------------\n")
 
-    return app
+    response = requests.get(url)
+    data = response.json()
+    print(data)
 
 # ------------------------
 if __name__ == "__main__":

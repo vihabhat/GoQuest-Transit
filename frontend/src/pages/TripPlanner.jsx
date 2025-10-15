@@ -17,14 +17,41 @@ import { SunIcon, MoonIcon } from "@chakra-ui/icons";
 import { FaArrowRight, FaRegCommentDots } from "react-icons/fa";
 import axios from "axios";
 
-const TripPlanner = () => {
-  const { colorMode, toggleColorMode } = useColorMode();
-  const [prompt, setPrompt] = useState("");
-  const [responses, setResponses] = useState([]);
-  const [loading, setLoading] = useState(false);
+const containerStyle = {
+  width: "100%",
+  height: "500px",
+};
 
-  const handleSend = async () => {
-    if (!prompt.trim()) return;
+export default function TripPlanner() {
+  const [places, setPlaces] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  });
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.error("Geolocation error:", err);
+          // Fallback location (e.g., Bangalore)
+          setUserLocation({ lat: 13.0192, lng: 77.6426 });
+        }
+      );
+    }
+  }, []);
+
+  const fetchNearbyPlaces = async () => {
+    if (!userLocation) return;
     setLoading(true);
 
     try {
@@ -51,6 +78,8 @@ const TripPlanner = () => {
       setLoading(false);
     }
   };
+
+  if (!isLoaded) return <Spinner size="xl" />;
 
   return (
     <Box
@@ -84,29 +113,13 @@ const TripPlanner = () => {
           </HStack>
         </Flex>
 
-        {/* Input Area */}
-        <VStack spacing={4} align="stretch">
-          <Textarea
-            placeholder="Enter your travel query..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            size="md"
-            resize="vertical"
-            minH="100px"
-            bg={colorMode === "light" ? "white" : "gray.700"}
-          />
-          <HStack justify="flex-end">
-            <Button
-              colorScheme="teal"
-              rightIcon={<FaArrowRight />}
-              onClick={handleSend}
-              isLoading={loading}
-              loadingText="Planning..."
-            >
-              Plan Trip
-            </Button>
-          </HStack>
-        </VStack>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={userLocation || { lat: 13.0192, lng: 77.6426 }}
+        zoom={14}
+      >
+        {/* Marker for user location */}
+        {userLocation && <Marker position={userLocation} label="You" />}
 
         {/* AI Responses */}
         <VStack
@@ -146,6 +159,4 @@ const TripPlanner = () => {
       </Container>
     </Box>
   );
-};
-
-export default TripPlanner;
+}
