@@ -11,174 +11,415 @@ import {
   IconButton,
   Spinner,
   Text,
-  Textarea,
+  FormControl,
+  FormLabel,
+  Input,
+  Select,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  SimpleGrid,
+  Tag,
+  TagLabel,
+  Alert,
+  AlertIcon,
 } from "@chakra-ui/react";
 import { SunIcon, MoonIcon } from "@chakra-ui/icons";
-import { FaArrowRight, FaRegCommentDots } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaMapMarkerAlt,
+  FaClock,
+} from "react-icons/fa";
 import axios from "axios";
-import { useJsApiLoader, GoogleMap, Marker } from "@react-google-maps/api";
-
-const containerStyle = {
-  width: "100%",
-  height: "500px",
-};
 
 export default function TripPlanner() {
-  const [userLocation, setUserLocation] = useState(null);
-  const [prompt, setPrompt] = useState(""); // ✅ Added
-  const [responses, setResponses] = useState([]); // ✅ Added
+  const [tripPlan, setTripPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const { colorMode, toggleColorMode } = useColorMode(); // ✅ Added
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  // Form state
+  const [formData, setFormData] = useState({
+    origin_city: "",
+    start_date: "",
+    end_date: "",
+    budget_usd: 1000,
+    traveler_count: 2,
+    interests: [],
+    pace: "balanced",
   });
 
-  // ✅ Get user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        (err) => {
-          console.error("Geolocation error:", err);
-          // Default to Bangalore
-          setUserLocation({ lat: 13.0192, lng: 77.6426 });
-        }
-      );
-    }
-  }, []);
+  const { colorMode, toggleColorMode } = useColorMode();
 
-  // ✅ AI Trip Planner call
+  // Handle input change
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Toggle interests
+  const handleInterestToggle = (interest) => {
+    setFormData((prev) => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter((i) => i !== interest)
+        : [...prev.interests, interest],
+    }));
+  };
+
+  // Generate AI Trip Plan
   const handlePlanTrip = async () => {
-    if (!prompt.trim()) return;
+    if (!formData.origin_city.trim()) {
+      setError("Please enter a destination city");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       const res = await axios.post(
         "http://127.0.0.1:5000/api/ai_trip",
-        { query: prompt },
+        formData,
         { headers: { "Content-Type": "application/json" } }
       );
-
-      setResponses((prev) => [
-        ...prev,
-        { text: res.data.response, id: prev.length },
-      ]);
-      setPrompt("");
+      setTripPlan(res.data.plan);
     } catch (err) {
       console.error(err);
-      setResponses((prev) => [
-        ...prev,
-        { text: "Error fetching AI response. Try again.", id: prev.length },
-      ]);
+      setError(
+        err.response?.data?.error ||
+        "Error generating trip plan. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isLoaded) return <Spinner size="xl" />;
-
   return (
-    <Box
-      minH="100vh"
-      bgImage="url('https://images.unsplash.com/photo-1578325429217-54e48e96297f?auto=format&fit=crop&w=1470&q=80')"
-      bgSize="cover"
-      bgPosition="center"
-      py={10}
-    >
-      <Container
-        maxW="container.lg"
-        bg={colorMode === "light" ? "whiteAlpha.900" : "blackAlpha.700"}
-        borderRadius="lg"
-        p={6}
-        boxShadow="lg"
-      >
-        {/* Header */}
-        <Flex justify="space-between" align="center" mb={8}>
-          <Heading size="lg">Trip Planner AI</Heading>
-          <HStack spacing={2}>
-            <IconButton
-              icon={<FaRegCommentDots />}
-              aria-label="Chat"
-              variant="outline"
-            />
-            <IconButton
-              icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-              onClick={toggleColorMode}
-              aria-label="Toggle theme"
-            />
-          </HStack>
-        </Flex>
-
-        {/* Input for AI Query */}
-        <Flex mb={4}>
-          <Textarea
-            placeholder="Describe your trip plan (e.g., weekend getaway in Bangalore)"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            bg={colorMode === "light" ? "white" : "gray.700"}
-            mr={2}
-          />
-          <IconButton
-            icon={<FaArrowRight />}
-            colorScheme="teal"
-            onClick={handlePlanTrip}
-            isLoading={loading}
-            aria-label="Generate trip plan"
-          />
-        </Flex>
-
-        {/* Map Display */}
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={userLocation || { lat: 13.0192, lng: 77.6426 }}
-          zoom={14}
+    <Box minH="100vh" bg="gray.50" py={10}>
+      <Container maxW="container.xl">
+        <Flex
+          justify="space-between"
+          align="center"
+          px={8}
+          py={4}
+          bg="whiteAlpha.900"
+          boxShadow="sm"
+          borderBottom="1px"
+          borderColor="gray.200"
         >
-          {userLocation && <Marker position={userLocation} label="You" />}
-        </GoogleMap>
+          {/* Logo / Brand */}
+          <Heading
+            size="lg"
+            color="teal.500"
+            cursor="pointer"
+            onClick={() => navigate("/")}
+          >
+            GoQuest Transit
+          </Heading>
 
-        {/* AI Responses */}
-        <VStack
-          mt={8}
-          spacing={4}
-          align="stretch"
-          maxH="60vh"
-          overflowY="auto"
-          p={4}
-          borderRadius="md"
-          bg={colorMode === "light" ? "gray.100" : "gray.600"}
-        >
-          {responses.length === 0 && !loading && (
-            <Text color="gray.500">
-              Your AI-generated travel plan will appear here.
-            </Text>
-          )}
-
-          {responses.map((resp) => (
-            <Box
-              key={resp.id}
-              p={4}
-              borderRadius="md"
-              bg={colorMode === "light" ? "white" : "gray.700"}
-              shadow="md"
-              whiteSpace="pre-wrap"
+          {/* Navigation Links */}
+          <HStack spacing={6}>
+            <Button
+              variant="ghost"
+              colorScheme="teal"
+              onClick={() => navigate("/tripplanner")}
             >
-              <Text>{resp.text}</Text>
-            </Box>
-          ))}
+              AI Trip Planner
+            </Button>
+            <Button
+              variant="ghost"
+              colorScheme="teal"
+              onClick={() => navigate("/gamification")}
+            >
+              Explore Nearby
+            </Button>
+            <Button
+              variant="ghost"
+              colorScheme="teal"
+              onClick={() => navigate("/profile")}
+            >
+              Profile
+            </Button>
+          </HStack>
 
-          {loading && (
-            <Flex justify="center" py={4}>
-              <Spinner size="lg" />
-            </Flex>
-          )}
-        </VStack>
+          {/* Theme Toggle */}
+          <IconButton
+            icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+            onClick={toggleColorMode}
+            aria-label="Toggle theme"
+            variant="ghost"
+            colorScheme="teal"
+          />
+        </Flex>
+
+
+        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
+          {/* Trip Planning Form */}
+          <Card>
+            <CardHeader>
+              <Heading size="md">Plan Your Trip</Heading>
+            </CardHeader>
+            <CardBody>
+              <VStack spacing={4} align="stretch">
+                <FormControl>
+                  <FormLabel>Destination City</FormLabel>
+                  <Input
+                    placeholder="e.g., Paris, Tokyo, New York"
+                    value={formData.origin_city}
+                    onChange={(e) =>
+                      handleInputChange("origin_city", e.target.value)
+                    }
+                  />
+                </FormControl>
+
+                <SimpleGrid columns={2} spacing={4}>
+                  <FormControl>
+                    <FormLabel>Start Date</FormLabel>
+                    <Input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) =>
+                        handleInputChange("start_date", e.target.value)
+                      }
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>End Date</FormLabel>
+                    <Input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) =>
+                        handleInputChange("end_date", e.target.value)
+                      }
+                    />
+                  </FormControl>
+                </SimpleGrid>
+
+                <SimpleGrid columns={2} spacing={4}>
+                  <FormControl>
+                    <FormLabel>Budget (USD)</FormLabel>
+                    <NumberInput
+                      value={formData.budget_usd || ""}
+                      onChange={(_, valueAsNumber) =>
+                        handleInputChange(
+                          "budget_usd",
+                          isNaN(valueAsNumber) ? "" : valueAsNumber
+                        )
+                      }
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormLabel>Travelers</FormLabel>
+                    <NumberInput
+                      value={formData.traveler_count || ""}
+                      onChange={(_, valueAsNumber) =>
+                        handleInputChange(
+                          "traveler_count",
+                          isNaN(valueAsNumber) ? "" : valueAsNumber
+                        )
+                      }
+                      min={1}
+                      max={10}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+                </SimpleGrid>
+
+                <FormControl>
+                  <FormLabel>Travel Pace</FormLabel>
+                  <Select
+                    value={formData.pace}
+                    onChange={(e) =>
+                      handleInputChange("pace", e.target.value)
+                    }
+                  >
+                    <option value="relaxed">Relaxed</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="packed">Packed</option>
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Interests</FormLabel>
+                  <HStack spacing={2} wrap="wrap">
+                    {[
+                      "culture",
+                      "food",
+                      "nature",
+                      "history",
+                      "nightlife",
+                      "shopping",
+                      "adventure",
+                      "art",
+                    ].map((interest) => (
+                      <Tag
+                        key={interest}
+                        size="md"
+                        colorScheme={
+                          formData.interests.includes(interest)
+                            ? "teal"
+                            : "gray"
+                        }
+                        cursor="pointer"
+                        onClick={() => handleInterestToggle(interest)}
+                      >
+                        <TagLabel>{interest}</TagLabel>
+                      </Tag>
+                    ))}
+                  </HStack>
+                </FormControl>
+
+                {error && (
+                  <Alert status="error">
+                    <AlertIcon />
+                    {error}
+                  </Alert>
+                )}
+
+                <Button
+                  colorScheme="teal"
+                  size="lg"
+                  onClick={handlePlanTrip}
+                  isLoading={loading}
+                  loadingText="Planning..."
+                  leftIcon={<FaArrowRight />}
+                >
+                  Generate Trip Plan
+                </Button>
+              </VStack>
+            </CardBody>
+          </Card>
+
+          {/* Trip Plan Display */}
+          <Card>
+            <CardHeader>
+              <Heading size="md">Your Trip Plan</Heading>
+            </CardHeader>
+            <CardBody>
+              {!tripPlan && !loading && (
+                <Text color="gray.500" textAlign="center" py={8}>
+                  Fill out the form and click "Generate Trip Plan" to see your
+                  personalized itinerary.
+                </Text>
+              )}
+
+              {loading && (
+                <Flex justify="center" py={8}>
+                  <VStack>
+                    <Spinner size="lg" />
+                    <Text>Generating your trip plan...</Text>
+                  </VStack>
+                </Flex>
+              )}
+
+              {tripPlan && (
+                <VStack spacing={6} align="stretch">
+                  {/* Trip Summary */}
+                  <Box p={4} bg="teal.50" borderRadius="md">
+                    <Heading size="sm" mb={2}>
+                      {tripPlan.summary?.title}
+                    </Heading>
+                    <HStack spacing={4}>
+                      <Badge colorScheme="blue">
+                        {tripPlan.summary?.duration_days} days
+                      </Badge>
+                      <Badge colorScheme="green">
+                        ${tripPlan.summary?.estimated_total_cost_usd}
+                      </Badge>
+                    </HStack>
+                  </Box>
+
+                  {/* Daily Itinerary */}
+                  {tripPlan.days?.map((day, dayIndex) => (
+                    <Box
+                      key={dayIndex}
+                      p={4}
+                      border="1px"
+                      borderColor="gray.200"
+                      borderRadius="md"
+                    >
+                      <Heading size="sm" mb={3}>
+                        Day {dayIndex + 1} - {day.date}
+                      </Heading>
+
+                      <VStack spacing={3} align="stretch">
+                        {day.activities?.map((activity, actIndex) => (
+                          <Box
+                            key={actIndex}
+                            p={3}
+                            bg="gray.50"
+                            borderRadius="md"
+                          >
+                            <HStack justify="space-between" mb={2}>
+                              <Text fontWeight="bold">
+                                {activity.name}
+                              </Text>
+                              <Badge colorScheme="purple">
+                                ${activity.cost_usd}
+                              </Badge>
+                            </HStack>
+                            <HStack spacing={4} mb={2}>
+                              <HStack>
+                                <FaMapMarkerAlt size="12" />
+                                <Text fontSize="sm">
+                                  {activity.location}
+                                </Text>
+                              </HStack>
+                              <HStack>
+                                <FaClock size="12" />
+                                <Text fontSize="sm">
+                                  {activity.start_time} - {activity.end_time}
+                                </Text>
+                              </HStack>
+                            </HStack>
+                            {activity.notes && (
+                              <Text fontSize="sm" color="gray.600">
+                                {activity.notes}
+                              </Text>
+                            )}
+                          </Box>
+                        ))}
+                      </VStack>
+                    </Box>
+                  ))}
+
+                  {/* Travel Tips */}
+                  {tripPlan.tips?.length > 0 && (
+                    <Box p={4} bg="yellow.50" borderRadius="md">
+                      <Heading size="sm" mb={2}>
+                        Travel Tips
+                      </Heading>
+                      <VStack spacing={1} align="stretch">
+                        {tripPlan.tips.map((tip, tipIndex) => (
+                          <Text key={tipIndex} fontSize="sm">
+                            • {tip}
+                          </Text>
+                        ))}
+                      </VStack>
+                    </Box>
+                  )}
+                </VStack>
+              )}
+            </CardBody>
+          </Card>
+        </SimpleGrid>
       </Container>
     </Box>
   );

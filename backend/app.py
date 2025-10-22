@@ -102,6 +102,14 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(destinations_bp, url_prefix="/destinations")
     app.register_blueprint(api_bp, url_prefix="/api")
+    from routes.travel import travel_bp
+    app.register_blueprint(travel_bp, url_prefix="/travel")
+    # Gamification endpoints
+    from routes.gamification import gamification_bp
+    app.register_blueprint(gamification_bp, url_prefix="/gamification")
+    # Feedback endpoints
+    from routes.feedback import feedback_bp
+    app.register_blueprint(feedback_bp, url_prefix="/feedback")
 
     return app
 

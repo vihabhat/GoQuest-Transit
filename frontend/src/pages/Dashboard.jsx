@@ -76,7 +76,7 @@ function Dashboard() {
                         Explore Nearby
                     </Button>
 
-                    <Button variant="ghost" onClick={() => navigate("/ai-trip-planner")}>
+                    <Button variant="ghost" onClick={() => navigate("/tripplanner")}>
                         AI Trip Planner
                     </Button>
                     <Button variant="ghost" onClick={() => navigate("/profile")}>
