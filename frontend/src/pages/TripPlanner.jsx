@@ -71,33 +71,51 @@ export default function TripPlanner() {
     }));
   };
 
-  // Generate AI Trip Plan
   const handlePlanTrip = async () => {
-    if (!formData.origin_city.trim()) {
-      setError("Please enter a destination city");
-      return;
-    }
-
+  try {
     setLoading(true);
     setError(null);
 
-    try {
-      const res = await axios.post(
-        "http://127.0.0.1:5000/api/ai_trip",
-        formData,
-        { headers: { "Content-Type": "application/json" } }
-      );
-      setTripPlan(res.data.plan);
-    } catch (err) {
-      console.error(err);
-      setError(
-        err.response?.data?.error ||
-        "Error generating trip plan. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const {
+      origin_city,
+      start_date,
+      end_date,
+      budget_usd,
+      traveler_count,
+      interests,
+      pace,
+    } = formData;
+
+    // Calculate trip duration
+    const days =
+      start_date && end_date
+        ? Math.ceil(
+            (new Date(end_date) - new Date(start_date)) /
+              (1000 * 60 * 60 * 24)
+          ) + 1
+        : "";
+
+    // Build the AI prompt
+    const prompt = `
+      Plan a ${days}-day ${pace.toLowerCase()} trip to ${origin_city}.
+      There will be ${traveler_count} travelers with a total budget of $${budget_usd}.
+      The interests are: ${interests.join(", ") || "general sightseeing"}.
+      Please provide a day-by-day itinerary with key attractions, local food recommendations, and travel tips.
+    `;
+
+    const response = await axios.post("http://127.0.0.1:5000/api/ai_trip", {
+      prompt: prompt.trim(),
+    });
+
+    setTripPlan(response.data.data);
+  } catch (error) {
+    console.error("Trip generation error:", error);
+    setError("Failed to generate trip plan. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <Box minH="100vh" bg="gray.50" py={10}>

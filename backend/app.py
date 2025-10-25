@@ -18,6 +18,8 @@ if not GOOGLE_API_KEY:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
+OLLAMA_API_URL = "http://localhost:11434/api/generate"  # default Ollama endpoint
+
 # Import your modules
 from extensions import db, migrate, bcrypt
 from models.user_model import User
@@ -89,15 +91,48 @@ def create_app():
     def test():
         return jsonify({"message": "Backend working fine!"})
 
+    @app.route("/auth/signup", methods=["POST"])
+    def signup():
+        data = request.get_json()
+        # handle signup logic here
+        return jsonify({"message": "Signup successful"}), 201
+
     @app.route("/api/ai_trip", methods=["POST", "OPTIONS"])
     def ai_trip_preflight():
         if request.method == "OPTIONS":
-            # Preflight request
+            # Handle CORS preflight
             return jsonify({}), 200
 
-        data = request.json
-        # TODO: Replace with actual AI trip logic using genai
-        return jsonify({"message": "Trip generated successfully", "data": data}), 200
+        try:
+            data = request.get_json()
+            user_prompt = data.get("prompt", "")
+
+            if not user_prompt:
+                return jsonify({"error": "Prompt is required"}), 400
+
+            # Prepare request for Ollama
+            payload = {
+                "model": "gemma3:1b",
+                "prompt": user_prompt,
+                "stream": False  # Disable streaming for simplicity
+            }
+
+            # Send request to Ollama
+            response = requests.post(OLLAMA_API_URL, json=payload)
+
+            if response.status_code != 200:
+                return jsonify({"error": f"Ollama returned {response.status_code}", "details": response.text}), 500
+
+            result = response.json()
+            ai_text = result.get("response", "").strip()
+
+            return jsonify({
+                "message": "Trip generated successfully",
+                "data": ai_text
+            }), 200
+
+        except Exception as e:
+            return jsonify({"error": f"AI generation failed: {str(e)}"}), 500
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(destinations_bp, url_prefix="/destinations")
