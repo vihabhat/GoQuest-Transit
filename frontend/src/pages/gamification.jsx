@@ -12,9 +12,11 @@ import {
   useColorModeValue,
   Spinner,
   VStack,
+  HStack,
 } from "@chakra-ui/react";
 import { SunIcon, MoonIcon, LockIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
+
 
 const Gamification = () => {
   const [places, setPlaces] = useState([]);
@@ -24,67 +26,129 @@ const Gamification = () => {
   const navigate = useNavigate();
   const { colorMode, toggleColorMode } = useColorMode();
 
-  const bgImage = "/assets/india-tourism-bg.png"; // background image path
+  const bgImage = "/assets/india-tourism-bg.png";
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const progressColor = useColorModeValue("blue.500", "blue.300");
 
   // Fetch live location
   useEffect(() => {
+    console.log("Gamification component mounted");
+    console.log("API Key available:", !!apiKey);
+
     if (navigator.geolocation) {
+      console.log("Requesting geolocation...");
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
+          console.log("Location obtained:", { latitude, longitude });
           fetchNearbyPlaces(latitude, longitude);
         },
         (err) => {
-          console.error(err);
-          setError("Location access denied. Please enable GPS.");
+          console.error("Geolocation error:", err);
+          setError(`Location access denied: ${err.message}. Please enable GPS.`);
           setLoading(false);
         }
       );
     } else {
-      setError("Geolocation not supported.");
+      console.error("Geolocation not supported");
+      setError("Geolocation not supported by your browser.");
       setLoading(false);
     }
   }, []);
 
   // Fetch nearby tourist places using Google Places API
   const fetchNearbyPlaces = async (lat, lng) => {
-  try {
-    setLoading(true);
-    const radius = 10000; // 10 km
-    const response = await fetch(
-      `http://127.0.0.1:5000/api/nearby_places?lat=${lat}&lng=${lng}&radius=${radius}`
-    );
-    const data = await response.json();
+    try {
+      setLoading(true);
+      setError(null);
+      const radius = 10000; // 10 km
+      const url = `http://127.0.0.1:5000/api/nearby_places?lat=${lat}&lng=${lng}&radius=${radius}`;
 
-    if (data.results) {
-      const formatted = data.results.slice(0, 9).map((place) => ({
-        id: place.place_id,
-        name: place.name,
-        distance: Math.floor(Math.random() * 9 + 1) + " km",
-        rating: place.rating || "N/A",
-        image:
-          place.photos && place.photos.length > 0
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${
-                import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-              }`
-            : "https://via.placeholder.com/400x250.png?text=No+Image",
-      }));
-      setPlaces(formatted);
-    } else {
-      setError("No nearby places found.");
+      console.log('=== Fetching Places ===');
+      console.log('URL:', url);
+      console.log('Coordinates:', { lat, lng });
+      console.log('Radius:', radius);
+
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Backend error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('=== Received Data ===');
+      console.log('Full response:', data);
+      console.log('Results count:', data.results?.length || 0);
+
+      if (data.error) {
+        console.error('API returned error:', data.error);
+        setError(data.error);
+        return;
+      }
+
+      if (data.results && data.results.length > 0) {
+        console.log('Processing places...');
+        const formatted = data.results.slice(0, 9).map((place, index) => {
+          console.log(`Place ${index + 1}:`, {
+            name: place.name,
+            id: place.place_id,
+            hasPhotos: !!place.photos,
+            rating: place.rating
+          });
+
+          // Handle new Places API photo format
+          let imageUrl = "https://via.placeholder.com/400x250.png?text=No+Image";
+          if (place.photos && place.photos.length > 0) {
+            const photoReference = place.photos[0].photo_reference;
+            // New API uses resource name format: places/{place_id}/photos/{photo_id}
+            if (photoReference.startsWith('places/')) {
+              imageUrl = `https://places.googleapis.com/v1/${photoReference}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
+            } else {
+              // Fallback to old API format
+              imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoReference}&key=${apiKey}`;
+            }
+          }
+
+          return {
+            id: place.place_id,
+            name: place.name,
+            distance: Math.floor(Math.random() * 9 + 1) + " km",
+            rating: place.rating || "N/A",
+            image: imageUrl,
+          };
+        });
+
+        console.log('=== Formatted Places ===');
+        console.log('Total formatted:', formatted.length);
+        console.log('Places:', formatted);
+        setPlaces(formatted);
+      } else {
+        console.warn('No results in response');
+        setError("No nearby tourist attractions found in this area. Try a different location.");
+      }
+    } catch (err) {
+      console.error('=== Fetch Error ===');
+      console.error('Error type:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Full error:', err);
+
+      if (err.message.includes('Failed to fetch')) {
+        setError("Cannot connect to backend. Make sure the server is running on port 5000.");
+      } else {
+        setError(`Failed to fetch places: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
+      console.log('=== Fetch Complete ===');
     }
-  } catch (err) {
-    console.error(err);
-    setError("Failed to fetch places from backend.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleVisit = (id) => {
+    console.log('Visiting place:', id);
     setVisitedCount((prev) => prev + 1);
     navigate("/lastmile");
   };
@@ -101,20 +165,31 @@ const Gamification = () => {
       py={6}
     >
       {/* Header */}
-      <Flex justify="space-between" align="center" mb={6}>
-        <Flex align="center" gap={3}>
-          <Image
-            src="https://cdn-icons-png.flaticon.com/512/3011/3011270.png"
-            boxSize="40px"
-            alt="Logo"
-          />
-          <Heading fontSize="2xl" color={useColorModeValue("gray.800", "white")}>
-            GoQuest Gamification
-          </Heading>
-        </Flex>
-        <Button onClick={toggleColorMode} rounded="full" variant="ghost">
-          {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-        </Button>
+      <Flex
+        justify="space-between"
+        align="center"
+        px={8}
+        py={4}
+        bg="whiteAlpha.900"
+        boxShadow="md"
+        position="relative"
+        zIndex={1}
+      >
+        <Heading color="teal.500" size="lg" cursor="pointer" onClick={() => navigate("/")}>
+          GoQuest Transit
+        </Heading>
+        <HStack spacing={4}>
+          <Button colorScheme="teal" onClick={() => navigate("/gamification")}>
+            Explore Nearby
+          </Button>
+
+          <Button variant="ghost" onClick={() => navigate("/tripplanner")}>
+            AI Trip Planner
+          </Button>
+          <Button variant="ghost" onClick={() => navigate("/profile")}>
+            Profile
+          </Button>
+        </HStack>
       </Flex>
 
       {/* Level Info */}
@@ -141,13 +216,45 @@ const Gamification = () => {
 
       {/* Places Section */}
       {loading ? (
-        <Flex justify="center" align="center" mt={20}>
-          <Spinner size="xl" />
+        <Flex justify="center" align="center" mt={20} direction="column" gap={4}>
+          <Spinner size="xl" color={progressColor} thickness="4px" />
+          <Text color={useColorModeValue("gray.600", "gray.300")}>
+            Loading nearby places...
+          </Text>
         </Flex>
       ) : error ? (
-        <Text color="red.400" fontWeight="medium" textAlign="center">
-          {error}
-        </Text>
+        <Box
+          bg={useColorModeValue("red.50", "red.900")}
+          color={useColorModeValue("red.800", "red.200")}
+          p={6}
+          rounded="xl"
+          textAlign="center"
+        >
+          <Text fontWeight="medium" fontSize="lg" mb={2}>
+            ⚠️ Error Loading Places
+          </Text>
+          <Text>{error}</Text>
+          <Button
+            mt={4}
+            colorScheme="red"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </Box>
+      ) : places.length === 0 ? (
+        <Box
+          bg={useColorModeValue("yellow.50", "yellow.900")}
+          color={useColorModeValue("yellow.800", "yellow.200")}
+          p={6}
+          rounded="xl"
+          textAlign="center"
+        >
+          <Text fontWeight="medium">
+            No places found nearby. Try changing your location.
+          </Text>
+        </Box>
       ) : (
         <SimpleGrid columns={[1, 2, 3]} spacing={6}>
           {places.map((place) => (
@@ -178,10 +285,11 @@ const Gamification = () => {
                 </Text>
                 <Button
                   colorScheme="teal"
-                  size="sm"
-                  onClick={() => handleVisit(place.id)}
+                  onClick={() =>
+                    navigate("/lastmile", { state: { destination: place.name } })
+                  }
                 >
-                  Visit
+                  Plan Last Mile
                 </Button>
               </Box>
             </Box>

@@ -26,7 +26,7 @@ function Dashboard() {
             description:
                 "Seamlessly plan your local transport options for smooth travel experiences.",
             buttonText: "View Connectivity Options",
-            route: "/last-mile",
+            route: "/lastmile",
         },
     ];
 

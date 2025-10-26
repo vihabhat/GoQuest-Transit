@@ -6,6 +6,7 @@ import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import TripPlanner from "./pages/TripPlanner";
 import Gamification from "./pages/gamification";
+import LastMile from "./pages/lastmile";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/tripplanner" element={<TripPlanner/>} />
         <Route path="/gamification" element={<Gamification />} />
+        <Route path ="/lastmile" element={<LastMile />} />
       </Routes>
     </Router>
   );
