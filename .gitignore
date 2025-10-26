@@ -1,0 +1,47 @@
+# ===== Backend =====
+backend/__pycache__/
+backend/env/
+backend/venv/
+backend/node_modules/
+backend/instance/
+backend/migrations/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Flask cache and logs
+backend/.pytest_cache/
+backend/.coverage
+backend/.env
+backend/.DS_Store
+backend/*.log
+
+# ===== Frontend =====
+frontend/node_modules/
+frontend/node_modules/.vite/
+frontend/dist/
+frontend/.DS_Store
+frontend/.env
+frontend/.eslintcache
+
+# ===== System Files =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE Files =====
+.vscode/
+.idea/
+
+# ===== Python virtual environments =====
+*.venv/
+env/
+venv/
+
+# ===== Logs =====
+*.log
+
+# ===== Dependencies =====
+__pycache__/
+*.egg-info/
