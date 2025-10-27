@@ -7,7 +7,6 @@ import Dashboard from "./pages/Dashboard";
 import TripPlanner from "./pages/TripPlanner";
 import Gamification from "./pages/gamification";
 import LastMile from "./pages/lastmile";
-import Profile from "./pages/Profiles";
 
 function App() {
   return (
@@ -22,7 +21,6 @@ function App() {
         <Route path="/tripplanner" element={<TripPlanner/>} />
         <Route path="/gamification" element={<Gamification />} />
         <Route path ="/lastmile" element={<LastMile />} />
-        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );
