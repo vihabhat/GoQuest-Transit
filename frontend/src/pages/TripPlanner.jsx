@@ -18,6 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { Moon, Sun, Send, User, Users, MapPin } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from "react-router-dom";
 
 const API_URL = 'http://localhost:5000';
 
@@ -27,6 +28,7 @@ export default function TripPlanner() {
   const [chatResponse, setChatResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
   const [backendStatus, setBackendStatus] = useState('Checking...');
 
   useEffect(() => {
@@ -134,10 +136,11 @@ export default function TripPlanner() {
           {chatResponse && (
             <Button
               colorScheme="teal"
-              leftIcon={<MapPin />}
-              onClick={() => (window.location.href = '/last-mile')}
+              onClick={() =>
+                navigate("/lastmile", { state: { destination: place.name } })
+              }
             >
-              Plan Last-Mile Connectivity
+              Plan Last Mile
             </Button>
           )}
 
